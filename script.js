@@ -1,95 +1,257 @@
-const form = document.getElementById('absensiForm');
-const message = document.getElementById('message');
-const riwayatList = document.getElementById('riwayatList');
-const tanggal = document.getElementById('tanggal');
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwQkDhUO42E6qjzNgT6m4-jMqR47VQsky1gLrHHPKeA2NRwEetbTFhTDmsdAE8EsfsI/exec';
+let dataSiswa = [];
 
-// Set tanggal otomatis
-function setTanggal() {
-    const now = new Date();
-    const options = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    tanggal.textContent = now.toLocaleDateString('id-ID', options);
+// Inisialisasi
+document.addEventListener('DOMContentLoaded', function() {
+    loadDataSiswa();
+    loadRiwayatAbsensi();
+    loadIzin();
+    loadPengumuman();
+    loadLokasi();
+    loadDataSiswaList();
+    showPage('absensi');
+});
+
+// Navigation
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+    document.getElementById(`page-${pageId}`).classList.add('active');
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('pageTitle').textContent = event.target.textContent.trim();
 }
-setTanggal();
-setInterval(setTanggal, 60000);
 
-// Web App URL - GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzRFtljh1WrSESM3uCBsGnUg4Ipap2pioQmycMuRi5NbuwBwvdOHufXQ3eiF8CORNsF/exec';
+// Toggle Sidebar Mobile
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
 
-form.addEventListener('submit', async (e) => {
+// Load Data Siswa untuk dropdown
+async function loadDataSiswa() {
+    try {
+        const response = await fetch(`${WEB_APP_URL}?action=getDataSiswa`);
+        dataSiswa = await response.json();
+        
+        const selects = ['siswaSelect', 'siswaIzin'];
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Pilih Siswa...</option>' + 
+                dataSiswa.map(siswa => 
+                    `<option value="${siswa.ID}" data-nama="${siswa.Nama}" data-kelas="${siswa.Kelas}">
+                        ${siswa.Nama} - ${siswa.Kelas}
+                    </option>`
+                ).join('');
+        });
+    } catch (error) {
+        console.error('Error loading siswa:', error);
+    }
+}
+
+// ABSENSI FORM
+document.getElementById('absensiForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const selectedOption = document.getElementById('siswaSelect').selectedOptions[0];
     const data = {
-        nama: document.getElementById('nama').value,
-        kelas: document.getElementById('kelas').value,
-        status: document.getElementById('status').value,
-        timestamp: new Date().toISOString()
+        action: 'simpanAbsensi',
+        ID: document.getElementById('siswaSelect').value,
+        Nama: selectedOption.dataset.nama,
+        Kelas: selectedOption.dataset.kelas,
+        Status: document.getElementById('statusAbsen').value,
+        Keterangan: document.getElementById('keterangan').value,
+        Tanggal: new Date().toISOString().split('T')[0],
+        Waktu: new Date().toLocaleTimeString('id-ID')
     };
 
     try {
-        showMessage('Menyimpan...', 'info');
-        
-        const response = await fetch(WEB_APP_URL, {
+        await fetch(WEB_APP_URL, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
+        
         showMessage('✅ Absensi berhasil disimpan!', 'success');
-        form.reset();
-        loadRiwayat();
+        e.target.reset();
+        loadRiwayatAbsensi();
+        
+        // Kirim notif alfa
+        if (data.Status === 'Alfa') {
+            kirimNotifAlfa(data);
+        }
         
     } catch (error) {
-        showMessage('❌ Gagal menyimpan absensi. Coba lagi!', 'error');
-        console.error('Error:', error);
+        showMessage('❌ Gagal menyimpan!', 'error');
     }
 });
 
-function showMessage(text, type) {
-    message.textContent = text;
-    message.className = type;
-    setTimeout(() => {
-        message.textContent = '';
-        message.className = '';
-    }, 4000);
-}
-
-async function loadRiwayat() {
+// Load Riwayat Absensi
+async function loadRiwayatAbsensi() {
     try {
-        const response = await fetch(`${WEB_APP_URL}?action=getRiwayat`);
+        const response = await fetch(`${WEB_APP_URL}?action=getRiwayatAbsensi`);
         const data = await response.json();
-        tampilkanRiwayat(data);
+        document.getElementById('riwayatAbsensi').innerHTML = 
+            data.length ? data.map(item => `
+                <div class="data-row">
+                    <div>
+                        <strong>${item.Nama}</strong> - ${item.Kelas}<br>
+                        <small>${item.Tanggal} ${item.Waktu}</small>
+                    </div>
+                    <span class="status-badge status-${item.Status.toLowerCase()}">${item.Status}</span>
+                </div>
+            `).join('') : '<p>Belum ada absensi hari ini</p>';
     } catch (error) {
-        riwayatList.innerHTML = '<p>Belum ada data absensi hari ini</p>';
+        document.getElementById('riwayatAbsensi').innerHTML = 'Error loading data';
     }
 }
 
-function tampilkanRiwayat(data) {
-    if (!data || data.length === 0) {
-        riwayatList.innerHTML = '<p>Belum ada data absensi hari ini</p>';
-        return;
-    }
+// IZIN FORM
+document.getElementById('izinForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const selectedOption = document.getElementById('siswaIzin').selectedOptions[0];
     
-    riwayatList.innerHTML = data.map(item => `
-        <div class="absensi-item">
-            <div>
-                <strong>${item.nama}</strong> - ${item.kelas}
-                <br><small>${new Date(item.timestamp).toLocaleString('id-ID')}</small>
-            </div>
-            <span class="status-badge status-${item.status.toLowerCase()}">${item.status}</span>
-        </div>
-    `).join('');
+    const data = {
+        action: 'simpanIzin',
+        ID: document.getElementById('siswaIzin').value,
+        Nama: selectedOption.dataset.nama,
+        Kelas: selectedOption.dataset.kelas,
+        TanggalIzin: document.getElementById('tanggalIzin').value,
+        Keterangan: document.getElementById('keteranganIzin').value
+    };
+
+    try {
+        await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        showMessage('✅ Izin berhasil diajukan!', 'success');
+        e.target.reset();
+        loadIzin();
+    } catch (error) {
+        showMessage('❌ Gagal mengajukan izin!', 'error');
+    }
+});
+
+async function loadIzin() {
+    try {
+        const response = await fetch(`${WEB_APP_URL}?action=getIzin`);
+        const data = await response.json();
+        document.getElementById('listIzin').innerHTML = 
+            data.map(item => `
+                <div class="data-row">
+                    <div>
+                        <strong>${item.Nama}</strong> - ${item.Kelas}<br>
+                        <small>${item.TanggalIzin} | ${item.Keterangan}</small>
+                    </div>
+                    <span class="status-badge">${item.StatusIzin || 'Pending'}</span>
+                </div>
+            `).join('') || '<p>Belum ada permintaan izin</p>';
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-// Load riwayat saat halaman dimuat
-loadRiwayat();
-setInterval(loadRiwayat, 30000); // Refresh setiap 30 detik
+// PENGUMUMAN
+document.getElementById('pengumumanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        action: 'simpanPengumuman',
+        Judul: document.getElementById('judulPengumuman').value,
+        Isi: document.getElementById('isiPengumuman').value,
+        Dari: 'Admin',
+        Tanggal: new Date().toISOString().split('T')[0]
+    };
+
+    try {
+        await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        showMessage('✅ Pengumuman dipublish!', 'success');
+        e.target.reset();
+        loadPengumuman();
+    } catch (error) {
+        showMessage('❌ Gagal publish!', 'error');
+    }
+});
+
+async function loadPengumuman() {
+    try {
+        const response = await fetch(`${WEB_APP_URL}?action=getPengumuman`);
+        const data = await response.json();
+        document.getElementById('listPengumuman').innerHTML = 
+            data.map(item => `
+                <div class="data-row">
+                    <div>
+                        <h4>${item.Judul}</h4>
+                        <p>${item.Isi}</p>
+                        <small>${item.Tanggal} - ${item.Dari}</small>
+                    </div>
+                </div>
+            `).join('') || '<p>Belum ada pengumuman</p>';
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function loadLokasi() {
+    try {
+        const response = await fetch(`${WEB_APP_URL}?action=getLokasi`);
+        const data = await response.json();
+        document.getElementById('lokasiList').innerHTML = 
+            data.map(item => `
+                <div class="data-row">
+                    <div>
+                        <strong>${item.NamaLokasi}</strong><br>
+                        <small>Lat: ${item.Lat} | Lng: ${item.Lng} | Radius: ${item.Radius}m</small>
+                    </div>
+                    <span style="color: ${item.Aktif === 'Ya' ? 'green' : 'red'}">
+                        ${item.Aktif}
+                    </span>
+                </div>
+            `).join('') || '<p>Belum ada lokasi</p>';
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function loadDataSiswaList() {
+    try {
+        const response = await fetch(`${WEB_APP_URL}?action=getDataSiswa`);
+        const data = await response.json();
+        document.getElementById('dataSiswaList').innerHTML = 
+            data.map(siswa => `
+                <div class="data-row">
+                    <div>
+                        <strong>ID: ${siswa.ID}</strong><br>
+                        ${siswa.Nama} - ${siswa.Kelas}<br>
+                        <small>${siswa.EmailWali} | ${siswa.NoHP}</small>
+                    </div>
+                </div>
+            `).join('');
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function showMessage(msg, type) {
+    // Implementasi toast notification
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+async function kirimNotifAlfa(data) {
+    // Notifikasi alfa otomatis ke email wali
+    await fetch(WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'kirimNotifAlfa',
+            ...data
+        })
+    });
+}
