@@ -3,52 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Siswa Otomatis</title>
+    <title>Sistem Absensi Siswa</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
+    <div class="sidebar" id="sidebar">
+        <div class="logo">
+            <i class="fas fa-graduation-cap"></i>
+            <h3>Absensi Siswa</h3>
+        </div>
+        <nav>
+            <a href="#" onclick="showPage('absensi')"><i class="fas fa-calendar-check"></i> Absensi</a>
+            <a href="#" onclick="showPage('izin')"><i class="fas fa-file-alt"></i> Izin</a>
+            <a href="#" onclick="showPage('pengumuman')"><i class="fas fa-bullhorn"></i> Pengumuman</a>
+            <a href="#" onclick="showPage('lokasi')"><i class="fas fa-map-marker-alt"></i> Lokasi</a>
+            <a href="#" onclick="showPage('data-siswa')"><i class="fas fa-users"></i> Data Siswa</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
         <header>
-            <h1>📚 Absensi Siswa</h1>
-            <p id="tanggal">Loading...</p>
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h2 id="pageTitle">Absensi</h2>
+            <div class="user-info">
+                <span id="userName">User</span>
+            </div>
         </header>
 
-        <div class="form-container">
-            <form id="absensiForm">
-                <div class="input-group">
-                    <label for="nama">Nama Siswa:</label>
-                    <input type="text" id="nama" required>
-                </div>
-                
-                <div class="input-group">
-                    <label for="kelas">Kelas:</label>
-                    <select id="kelas" required>
-                        <option value="">Pilih Kelas</option>
-                        <option value="X">X</option>
-                        <option value="XI">XI</option>
-                        <option value="XII">XII</option>
-                    </select>
-                </div>
-                
-                <div class="input-group">
-                    <label for="status">Status:</label>
-                    <select id="status" required>
-                        <option value="Hadir">Hadir</option>
-                        <option value="Alfa">Alfa</option>
-                        <option value="Ijin">Ijin</option>
-                        <option value="Sakit">Sakit</option>
-                    </select>
-                </div>
-                
-                <button type="submit">Simpan Absensi</button>
-            </form>
+        <!-- HALAMAN ABSENSI -->
+        <div id="page-absensi" class="page active">
+            <div class="card">
+                <h3><i class="fas fa-fingerprint"></i> Absen Sekarang</h3>
+                <form id="absensiForm">
+                    <div class="input-group">
+                        <label>Pilih Siswa</label>
+                        <select id="siswaSelect" required>
+                            <option value="">Cari Siswa...</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="statusAbsen" required>
+                            <option value="Hadir">Hadir</option>
+                            <option value="Alfa">Alfa</option>
+                            <option value="Izin">Izin</option>
+                            <option value="Sakit">Sakit</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Keterangan</label>
+                        <input type="text" id="keterangan" placeholder="Opsional">
+                    </div>
+                    <button type="submit"><i class="fas fa-save"></i> Simpan Absensi</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Riwayat Absensi Hari Ini</h3>
+                <div id="riwayatAbsensi">Loading...</div>
+            </div>
         </div>
 
-        <div id="message"></div>
-        
-        <div class="riwayat">
-            <h3>Riwayat Absensi Hari Ini</h3>
-            <div id="riwayatList">Loading...</div>
+        <!-- HALAMAN IZIN -->
+        <div id="page-izin" class="page">
+            <div class="card">
+                <h3><i class="fas fa-plus"></i> Ajukan Izin</h3>
+                <form id="izinForm">
+                    <div class="input-group">
+                        <label>Pilih Siswa</label>
+                        <select id="siswaIzin" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label>Tanggal Izin</label>
+                        <input type="date" id="tanggalIzin" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Keterangan Izin</label>
+                        <textarea id="keteranganIzin" required></textarea>
+                    </div>
+                    <button type="submit"><i class="fas fa-paper-plane"></i> Kirim Izin</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3>Izin Menunggu Persetujuan</h3>
+                <div id="listIzin">Loading...</div>
+            </div>
+        </div>
+
+        <!-- HALAMAN PENGUMUMAN -->
+        <div id="page-pengumuman" class="page">
+            <div class="card">
+                <h3><i class="fas fa-plus"></i> Buat Pengumuman</h3>
+                <form id="pengumumanForm">
+                    <div class="input-group">
+                        <label>Judul</label>
+                        <input type="text" id="judulPengumuman" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Isi Pengumuman</label>
+                        <textarea id="isiPengumuman" required></textarea>
+                    </div>
+                    <button type="submit"><i class="fas fa-bullhorn"></i> Publish</button>
+                </form>
+            </div>
+            <div class="card">
+                <h3>Pengumuman Terbaru</h3>
+                <div id="listPengumuman">Loading...</div>
+            </div>
+        </div>
+
+        <!-- HALAMAN LOKASI -->
+        <div id="page-lokasi" class="page">
+            <div class="card">
+                <h3>Lokasi Absen Aktif</h3>
+                <div id="lokasiList">Loading...</div>
+            </div>
+        </div>
+
+        <!-- HALAMAN DATA SISWA -->
+        <div id="page-data-siswa" class="page">
+            <div class="card">
+                <h3>Data Siswa</h3>
+                <div id="dataSiswaList">Loading...</div>
+            </div>
         </div>
     </div>
 
