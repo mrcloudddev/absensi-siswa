@@ -1,7 +1,7 @@
 # Sistem Absensi Siswa
 
 ## Demo
-[Live Demo]([YOUR_WEB_APP_URL](https://script.google.com/macros/s/AKfycbxOoV3NuUEKvC81pA_a0tPxVM2IbPyNq1I35ryKOyz9qGcumYNw4VoU6ve3LDNmzxyV/exec))
+[Live Demo]([YOUR_WEB_APP_URL](https://script.google.com/macros/s/AKfycbzRFtljh1WrSESM3uCBsGnUg4Ipap2pioQmycMuRi5NbuwBwvdOHufXQ3eiF8CORNsF/exec)
 
 ## Setup
 1. Clone repo
